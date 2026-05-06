@@ -1,0 +1,35 @@
+﻿using CinestarDBManager.DBManager.utils;
+using Microsoft.Extensions.Configuration;
+
+namespace CinestarDBManager.DBManager;
+
+public static class DbFactoryProvider
+{
+    private static DbManager? _instancia;
+
+    public static DbManager GetManager()
+    {
+        if (_instancia is not null)
+        {
+            return _instancia;
+        }
+
+        var config = ConfigurationContext.Current;
+
+        var tipoRaw = config["DbSettings:Tipo"]
+            ?? "MySQL";
+        var tipo = Enum.Parse<TipoDb>(tipoRaw, ignoreCase: true);
+
+        var connectionStringBase = config.GetConnectionString("SoftProgDb")
+            ?? throw new InvalidOperationException("No se encontro ConnectionStrings:SoftProgDb en la configuracion.");
+
+        DbManagerFactory factory = tipo switch
+        {
+            TipoDb.MySQL => new MySqlDbManagerFactory(),
+            _ => throw new ArgumentOutOfRangeException(nameof(tipo), tipo, "Tipo de DB no soportado")
+        };
+
+        _instancia = factory.CrearDbManager(connectionStringBase);
+        return _instancia;
+    }
+}
